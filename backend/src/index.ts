@@ -1,6 +1,7 @@
 import express, { Request, Response, Express } from "express";
 import path from "path";
 import fs from "fs"
+import createSiteConf from "./vhost-conf"
 
 const app: Express = express();
 const port = 8080;
@@ -12,23 +13,7 @@ const port = 8080;
 
 function initiateSiteFiles(domain: string) {
 	let rootPath: string = path.resolve(__dirname, "..");
-	rootPath= path.resolve(rootPath, "..");
-	const publicDir: string = path.join(rootPath, "www", domain, "public_html")
-	console.log(publicDir)
-	const logDir: string = path.join(rootPath, "www", domain, "logs")
-	console.log(logDir)
-
-	fs.mkdir(publicDir, { recursive: true }, (err) => {
-		if (err) {
-			throw err;
-		}
-	});
-
-	fs.mkdir(logDir, { recursive: true }, (err) => {
-		if (err) {
-			throw err;
-		}
-	});
+	rootPath = path.resolve(rootPath, "..");
 
 
 	function callback(err: NodeJS.ErrnoException | null): void {
@@ -36,8 +21,23 @@ function initiateSiteFiles(domain: string) {
 		console.log('source.txt was copied to destination.txt');
 	}
 
-	// destination.txt will be created or overwritten by default.
-	fs.copyFile(`${rootPath}/index.html`, `${publicDir}/index.html`, callback);
+	fs.mkdir(path.join(rootPath, "www", domain, "public_html")
+		, { recursive: true }, (err) => {
+			if (err) {
+				throw err;
+			}
+			fs.copyFile(`${rootPath}/index.html`, `${path.join(rootPath, "www", domain, "public_html")}/index.html`, 
+			callback);
+		});
+
+	fs.mkdir(path.join(rootPath, "www", domain, "logs"),
+		{ recursive: true }, (err) => {
+			if (err) {
+				throw err;
+			}
+		});
+
+
 }
 
 function a2ensite(filePath: string): void {
@@ -51,6 +51,8 @@ app.get("/", (req: Request, res: Response) => {
 app.get("/create/:domain", (req: Request<{ domain: string }>, res: Response) => {
 	const domain: string = req.params.domain;
 	initiateSiteFiles(domain)
+	createSiteConf(domain)
+	// to-do create a script to move the *.conf to /etc/apache/
 })
 
 app.listen(port, () => {
